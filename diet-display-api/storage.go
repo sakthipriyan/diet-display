@@ -101,9 +101,9 @@ func CreateDatabase(filePath string) (*sql.DB, error) {
 		evening TEXT,
 		dinner TEXT,
 		post_dinner TEXT,
-		night TEXT
-	);
-	CREATE INDEX diet_user_id_date_idx ON diet (date,user_id);`
+		night TEXT,
+		UNIQUE(user_id,date)
+	);`
 	_, err = db.Exec(ddlStatements)
 
 	if err != nil {
@@ -200,4 +200,79 @@ func CreateRecords(db *sql.DB, records []Record) error {
 		VALUES %s`, strings.Join(values, ","))
 	_, err := db.Exec(stmt, args...)
 	return err
+}
+
+func DeleteRecord(db *sql.DB, id int) error {
+	stmt, err := db.Prepare("DELETE FROM diet WHERE id = ?")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(id)
+	return err
+}
+
+func GetRecord(db *sql.DB, id int) (*Record, error) {
+	stmt, err := db.Prepare("SELECT * FROM diet WHERE id = ?")
+	if err != nil {
+		return nil, err
+	}
+	row := stmt.QueryRow(id)
+	var userID int
+	var date int
+	r := Record{}
+	err = row.Scan(&r.ID, &userID, &date, &r.Morning, &r.PreBreakfast, &r.Breakfast,
+		&r.Noon, &r.Lunch, &r.Evening, &r.Dinner, &r.PostDinner, &r.Night)
+	switch err {
+	case sql.ErrNoRows:
+		return nil, nil
+	case nil:
+		r.Name, err = IDToName(userID)
+		if err != nil {
+			return nil, err
+		}
+		r.Date, err = DbIntDateToDate(date)
+		if err != nil {
+			return nil, err
+		}
+		return &r, nil
+	default:
+		return nil, err
+	}
+}
+
+func UpdateRecord(db *sql.DB, r Record) (*Record, error) {
+	nameID, err := NameToID(r.Name)
+	if err != nil {
+		return nil, err
+	}
+	dbIntDate, err := DateToDbIntDate(r.Date)
+	if err != nil {
+		return nil, err
+	}
+	stmt :=
+		`UPDATE diet SET
+		user_id = ?, date = ?, morning = ?, pre_breakfast = ?, breakfast = ?, 
+		noon = ?, lunch = ?, evening = ?, dinner = ? ,post_dinner = ?,night = ?
+		WHERE id = ?;`
+	res, err := db.Exec(stmt, nameID, dbIntDate, r.Morning, r.PreBreakfast,
+		r.Breakfast, r.Noon, r.Lunch, r.Evening, r.Dinner, r.PostDinner, r.Night, r.ID)
+	if err != nil {
+		return nil, err
+	}
+	c, err := res.RowsAffected()
+	if err != nil {
+		return nil, err
+	}
+	switch c {
+	case 0:
+		return nil, nil
+	case 1:
+		return &r, nil
+	default:
+		return nil, errors.New(fmt.Sprintf("Number of rows affected %v > 1", c))
+	}
+	if c != 1 {
+		return nil, errors.New("Number of rows affected " + strconv.Itoa(int(c)) + " != 1")
+	}
+	return &r, nil
 }
