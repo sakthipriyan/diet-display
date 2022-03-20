@@ -249,8 +249,7 @@ func UpdateRecord(db *sql.DB, r Record) (*Record, error) {
 	if err != nil {
 		return nil, err
 	}
-	stmt :=
-		`UPDATE diet SET
+	stmt := `UPDATE diet SET
 		user_id = ?, date = ?, morning = ?, pre_breakfast = ?, breakfast = ?, 
 		noon = ?, lunch = ?, evening = ?, dinner = ? ,post_dinner = ?,night = ?
 		WHERE id = ?;`
@@ -271,8 +270,4 @@ func UpdateRecord(db *sql.DB, r Record) (*Record, error) {
 	default:
 		return nil, errors.New(fmt.Sprintf("Number of rows affected %v > 1", c))
 	}
-	if c != 1 {
-		return nil, errors.New("Number of rows affected " + strconv.Itoa(int(c)) + " != 1")
-	}
-	return &r, nil
 }
