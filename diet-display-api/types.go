@@ -1,8 +1,15 @@
 package main
 
+// APIResponse used for generic responses
+type APIResponse struct {
+	Status  int    `json:"status"`
+	Message string `json:"message"`
+}
+
 type Record struct {
-	ID           int    `json:"id"`   // auto increment
-	Name         string `json:"name"` // User name from int
+	ID           int    `json:"id"`
+	Name         string `json:"name"`
+	Date         string `json:"date"`
 	Morning      string `json:"morning"`
 	PreBreakfast string `json:"pre_breakfast"`
 	Breakfast    string `json:"breakfast"`
@@ -22,6 +29,10 @@ type LabelTime struct {
 type DietResponse struct {
 	Data   []Record             `json:"data"`
 	Header map[string]LabelTime `json:"header"`
+}
+
+type DietRequest struct {
+	Data []Record `json:"data"`
 }
 
 var defaultHeader = map[string]LabelTime{
