@@ -140,7 +140,7 @@ func ReadRecords(nextNdays int) ([]Record, error) {
 	if err != nil {
 		return nil, err
 	}
-	stmt, err := db.Prepare("SELECT * FROM diet WHERE date >= ? AND date <= ?")
+	stmt, err := db.Prepare("SELECT * FROM diet WHERE date >= ? AND date <= ? ORDER BY date, user_id")
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +178,10 @@ func ReadRecords(nextNdays int) ([]Record, error) {
 	return records, nil
 }
 
+var ErrPastDate = errors.New("Given date in past")
+
 func CreateRecords(db *sql.DB, records []Record) error {
+	today, _ := DateToIntDate(time.Now())
 	values := make([]string, 0, len(records))
 	args := make([]interface{}, 0, len(records)*11)
 	for _, r := range records {
@@ -190,6 +193,9 @@ func CreateRecords(db *sql.DB, records []Record) error {
 		dbIntDate, err := DateToDbIntDate(r.Date)
 		if err != nil {
 			return err
+		}
+		if dbIntDate < today {
+			return ErrPastDate
 		}
 		args = append(args, nameID, dbIntDate, r.Morning, r.PreBreakfast,
 			r.Breakfast, r.Noon, r.Lunch, r.Evening, r.Dinner, r.PostDinner, r.Night)
@@ -248,6 +254,10 @@ func UpdateRecord(db *sql.DB, r Record) (*Record, error) {
 	dbIntDate, err := DateToDbIntDate(r.Date)
 	if err != nil {
 		return nil, err
+	}
+	today, _ := DateToIntDate(time.Now())
+	if dbIntDate < today {
+		return nil, ErrPastDate
 	}
 	stmt := `UPDATE diet SET
 		user_id = ?, date = ?, morning = ?, pre_breakfast = ?, breakfast = ?, 

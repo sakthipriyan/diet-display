@@ -50,15 +50,18 @@ func PutRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	record, err = UpdateRecord(db, *record)
-	if err != nil {
+	switch err {
+	case nil:
+		if record == nil {
+			notFound(w, id)
+		} else {
+			okRequest(w, record)
+		}
+	case ErrPastDate:
+		badRequest(w, "Failed to process", err)
+	default:
 		internalServerError(w, err)
-		return
 	}
-	if record == nil {
-		notFound(w, id)
-		return
-	}
-	okRequest(w, record)
 }
 
 func GetRecords(w http.ResponseWriter, r *http.Request) {
@@ -79,11 +82,14 @@ func PostRecords(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	err = CreateRecords(db, request.Data)
-	if err != nil {
+	switch err {
+	case nil:
+		okRequest(w, APIResponse{Status: 200, Message: "Created Diets"})
+	case ErrPastDate:
+		badRequest(w, "Failed to process", err)
+	default:
 		internalServerError(w, err)
-		return
 	}
-	okRequest(w, APIResponse{Status: 200, Message: "Created Diets"})
 }
 
 func ProcessGetRecord(w http.ResponseWriter, r *http.Request) {
